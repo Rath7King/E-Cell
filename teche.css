@@ -1,0 +1,119 @@
+*{
+    margin:0px;
+    padding:0px;
+    box-sizing:border-box;
+}
+
+nav{
+    display: flex;
+    justify-content:space-around;
+    align-items:center;
+    min-height:8vh;
+    background-color:white;
+    font-family:"Montserrat",sans-serif;
+    
+}
+
+.nav-links {
+    display: flex;
+    justify-content:space-around;
+    width: 30%;
+}
+
+.nav-links {
+    list-style: none;
+}
+
+.heading {
+    color:black;
+    float:left;
+    text-transform:uppercase;
+    letter-spacing:5px;
+    font-size:20px;
+    float:left;
+}
+
+.nav-links a{
+    color:black;
+    text-decoration: none;
+    letter-spacing:3px;
+    font-weight:bold;
+    font-size:15px;
+    padding:15px;
+
+}
+
+.nav-links a:hover{
+    color:red;
+}
+
+.image{
+    float:left;
+}
+h3{
+    font-size:40px;
+}
+
+.new{
+    font-size:25px;
+}
+
+.button{
+    font-size:22px;
+    background-color:rgb(18, 228, 200);
+    color:white;
+    border:25px;
+    border-radius:5px;
+    padding:20px;
+    text-decoration:none;
+    margin:10px 125px;
+    cursor:pointer;
+}
+
+.button span {
+    cursor: pointer;
+    display: inline-block;
+    position: relative;
+    transition: 0.5s;
+  }
+  
+  .button span:after {
+    content: '\00bb';
+    position: absolute;
+    opacity: 0;
+    top: 0;
+    right: -20px;
+    transition: 0.5s;
+  }
+  
+  .button:hover span {
+    padding-right: 25px;
+  }
+  
+  .button:hover span:after {
+    opacity: 1;
+    right: 0;
+  }
+
+  .column {
+    float: left;
+    width: 12%;
+    padding: 5px;
+  }
+  
+  /* Clearfix (clear floats) */
+  .row::after {
+    content: "";
+    clear: both;
+    display: table;
+  }
+
+#right{
+    text-align: right;
+    margin: 5px;
+}
+
+.f{
+    font-size:50px;
+    color:red;
+}
