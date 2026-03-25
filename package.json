@@ -1,0 +1,33 @@
+{
+  "name": "finsight-mfu-dashboard",
+  "version": "1.0.0",
+  "description": "FinSight MFU Dashboard with HANA live connection",
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@sap/cds": "^7",
+    "@sap/cds-hana": "^2",
+    "express": "^4"
+  },
+  "devDependencies": {
+    "@sap/cds-dk": "^7",
+    "sqlite3": "^5"
+  },
+  "scripts": {
+    "start":       "cds-serve",
+    "dev":         "cds watch",
+    "build":       "cds build --production",
+    "deploy:hana": "cds deploy --to hana"
+  },
+  "cds": {
+    "requires": {
+      "db": {
+        "kind": "hana-cloud",
+        "[development]": {
+          "kind": "sqlite",
+          "credentials": { "url": ":memory:" }
+        }
+      }
+    },
+    "features": { "fetch_csrf": true }
+  }
+}

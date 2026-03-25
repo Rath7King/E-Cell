@@ -1,0 +1,119 @@
+-- =====================================================
+-- FinSight MFU Dashboard — Sample HANA Test Queries
+-- Run these in SAP HANA Database Explorer or DBeaver
+-- After each INSERT, click Refresh in the dashboard
+-- =====================================================
+
+-- ── STEP 1: Check tables were created ────────────────
+SELECT TABLE_NAME
+FROM SYS.TABLES
+WHERE SCHEMA_NAME = CURRENT_SCHEMA
+  AND TABLE_NAME LIKE 'FINSIGHT%'
+ORDER BY TABLE_NAME;
+-- Expected output:
+-- FINSIGHT_MFU_MFULOADDETAILS
+-- FINSIGHT_MFU_MFUTEMPLATES
+-- FINSIGHT_MFU_MFUUSAGESTATS
+
+
+-- ── STEP 2: View current KPI counts ──────────────────
+SELECT
+    COUNT(*)                                              AS "Total Uploaded",
+    COUNT(CASE WHEN STATUS = 'APPROVED'  THEN 1 END)     AS "Total Approved",
+    COUNT(CASE WHEN STATUS = 'REJECTED'  THEN 1 END)     AS "Total Rejected",
+    COUNT(CASE WHEN STATUS = 'PENDING'   THEN 1 END)     AS "Total Pending"
+FROM "FINSIGHT_MFU_MFUTEMPLATES";
+
+
+-- ── STEP 3: View module breakdown ────────────────────
+SELECT
+    MODULENAME,
+    COUNT(CASE WHEN STATUS = 'APPROVED' THEN 1 END) AS "Approved",
+    COUNT(CASE WHEN STATUS = 'PENDING'  THEN 1 END) AS "Pending",
+    COUNT(CASE WHEN STATUS = 'UPLOADED' THEN 1 END) AS "Uploaded"
+FROM "FINSIGHT_MFU_MFUTEMPLATES"
+GROUP BY MODULENAME
+ORDER BY MODULENAME;
+
+
+-- =====================================================
+-- TEST INSERTS — These will reflect live on the dashboard
+-- =====================================================
+
+-- ── INSERT 1: Add a new APPROVED ESG template ────────
+-- Dashboard impact: Total Uploaded +1, Total Approved +1,
+--                   Template Onboarded +1, ESG bar grows
+INSERT INTO "FINSIGHT_MFU_MFUTEMPLATES"
+    (ID, MODULENAME, TEMPLATENAME, STATUS, LOADTYPE, SUBMODULE, CREATEDAT, UPDATEDAT)
+VALUES
+    (SYSUUID, 'ESG', 'MFU ESG CARBON REPORT', 'APPROVED', 'TRUNCATE', 'MAPPING MASTER', NOW(), NOW());
+
+
+-- ── INSERT 2: Add a new PENDING NFRP template ────────
+-- Dashboard impact: Total Uploaded +1, NFRP pending bar grows
+INSERT INTO "FINSIGHT_MFU_MFUTEMPLATES"
+    (ID, MODULENAME, TEMPLATENAME, STATUS, LOADTYPE, SUBMODULE, CREATEDAT, UPDATEDAT)
+VALUES
+    (SYSUUID, 'NFRP', 'MFU NFRP RISK MATRIX', 'PENDING', 'DELTA', 'NFRP MASTER', NOW(), NOW());
+
+
+-- ── INSERT 3: Add a REJECTED template ────────────────
+-- Dashboard impact: Total Rejected changes from "-" to "1"
+INSERT INTO "FINSIGHT_MFU_MFUTEMPLATES"
+    (ID, MODULENAME, TEMPLATENAME, STATUS, LOADTYPE, SUBMODULE, CREATEDAT, UPDATEDAT)
+VALUES
+    (SYSUUID, 'TREASURY', 'MFU TREASURY INVALID', 'REJECTED', 'FULL', 'TREASURY MASTER', NOW(), NOW());
+
+
+-- ── INSERT 4: Add a load detail row ──────────────────
+-- Dashboard impact: Appears in MFU Details table at the bottom
+INSERT INTO "FINSIGHT_MFU_MFULOADDETAILS"
+    (ID, MODULENAME, SUBMODULENAME, LOADTYPE, LOADTEMPLATE, LOADCOUNT, LOADDATE)
+VALUES
+    (SYSUUID, 'ESG', 'MAPPING MASTER', 'TRUNCATE', 'MFU ESG CARBON REPORT', 45200, NOW());
+
+
+-- ── INSERT 5: Add usage stats for Top 3 charts ───────
+-- Dashboard impact: Updates Top 3 Month/Quarter/Year column charts
+INSERT INTO "FINSIGHT_MFU_MFUUSAGESTATS"
+    (ID, TEMPLATENAME, MODULENAME, USAGECOUNT, PERIOD, PERIODDATE)
+VALUES
+    (SYSUUID, 'MFU ESG CARBON REPORT', 'ESG', 28, 'MONTH', CURRENT_DATE);
+
+INSERT INTO "FINSIGHT_MFU_MFUUSAGESTATS"
+    (ID, TEMPLATENAME, MODULENAME, USAGECOUNT, PERIOD, PERIODDATE)
+VALUES
+    (SYSUUID, 'MFU ESG CARBON REPORT', 'ESG', 45, 'QUARTER', CURRENT_DATE);
+
+INSERT INTO "FINSIGHT_MFU_MFUUSAGESTATS"
+    (ID, TEMPLATENAME, MODULENAME, USAGECOUNT, PERIOD, PERIODDATE)
+VALUES
+    (SYSUUID, 'MFU ESG CARBON REPORT', 'ESG', 72, 'YEAR', CURRENT_DATE);
+
+
+-- ── VERIFY: Run after inserts to confirm data ────────
+SELECT MODULENAME, TEMPLATENAME, STATUS, LOADTYPE, CREATEDAT
+FROM "FINSIGHT_MFU_MFUTEMPLATES"
+ORDER BY CREATEDAT DESC
+LIMIT 10;
+
+SELECT MODULENAME, LOADTEMPLATE, LOADCOUNT, LOADDATE
+FROM "FINSIGHT_MFU_MFULOADDETAILS"
+ORDER BY LOADDATE DESC
+LIMIT 10;
+
+SELECT MODULENAME, USAGECOUNT, PERIOD, PERIODDATE
+FROM "FINSIGHT_MFU_MFUUSAGESTATS"
+ORDER BY USAGECOUNT DESC;
+
+
+-- ── UPDATE: Change a template status ─────────────────
+-- Example: promote a PENDING template to APPROVED
+UPDATE "FINSIGHT_MFU_MFUTEMPLATES"
+SET STATUS = 'APPROVED', UPDATEDAT = NOW()
+WHERE TEMPLATENAME = 'MFU NFRP RISK MATRIX';
+
+
+-- ── DELETE: Remove a template ─────────────────────────
+DELETE FROM "FINSIGHT_MFU_MFUTEMPLATES"
+WHERE TEMPLATENAME = 'MFU TREASURY INVALID';

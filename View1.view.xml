@@ -1,0 +1,201 @@
+<mvc:View controllerName="project1.controller.View1"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:l="sap.ui.layout"
+    xmlns:core="sap.ui.core"
+    xmlns:viz="sap.viz.ui5.controls"
+    xmlns:vizData="sap.viz.ui5.data">
+
+    <Page showHeader="false">
+        <content>
+            <VBox>
+
+                <!-- HEADER -->
+                <HBox alignItems="Center" justifyContent="SpaceBetween"
+                      class="sapUiSmallMarginBegin sapUiSmallMarginEnd sapUiTinyMarginTop">
+                    <VBox>
+                        <Text text="Aspire" class="aspireLabel"/>
+                        <HBox alignItems="Center">
+                            <Text text="Fin"   class="brandFin"/>
+                            <Text text="Sight" class="brandSight"/>
+                        </HBox>
+                    </VBox>
+                    <HBox alignItems="Center">
+                        <Button icon="sap-icon://refresh"
+                                text="Refresh"
+                                type="Emphasized"
+                                press="onRefresh"
+                                class="sapUiTinyMarginEnd"/>
+                        <core:Icon src="sap-icon://calendar" class="sapUiTinyMarginEnd"/>
+                        <Text text="{dashboard>/createdDate}" class="dateText"/>
+                    </HBox>
+                </HBox>
+
+                <!-- FULL-WIDTH GREEN BANNER -->
+                <HBox class="dashboardBanner" alignItems="Center">
+                    <Text text="MFU Dashboard" class="dashboardBannerText"/>
+                </HBox>
+
+                <!-- MAIN BODY -->
+                <VBox class="sapUiSmallMargin">
+
+                    <!-- ROW 1: KPI 50% + Module Chart 50% -->
+                    <HBox alignItems="Stretch" class="sapUiSmallMarginBottom row1Wrap">
+
+                        <l:Grid defaultSpan="XL6 L6 M6 S6"
+                                class="kpiGrid sapUiSmallMarginEnd"
+                                containerQuery="true">
+                            <VBox class="kpiCard">
+                                <Text text="Total MFU Uploaded"    class="kpiLabel"/>
+                                <Text text="{dashboard>/kpi/uploaded}"  class="kpiValue"/>
+                                <Text text="MFU COUNT" class="kpiSubLabel"/>
+                            </VBox>
+                            <VBox class="kpiCard">
+                                <Text text="Total MFU Approved"    class="kpiLabel"/>
+                                <Text text="{dashboard>/kpi/approved}"  class="kpiValue"/>
+                                <Text text="MFU COUNT" class="kpiSubLabel"/>
+                            </VBox>
+                            <VBox class="kpiCard">
+                                <Text text="MFU Template Onboarded" class="kpiLabel"/>
+                                <Text text="{dashboard>/kpi/onboarded}" class="kpiValue"/>
+                                <Text text="MFU COUNT" class="kpiSubLabel"/>
+                            </VBox>
+                            <VBox class="kpiCard">
+                                <Text text="Total MFU Rejected"    class="kpiLabel"/>
+                                <Text text="{dashboard>/kpi/rejected}"  class="kpiValue"/>
+                                <Text text="MFU COUNT" class="kpiSubLabel"/>
+                            </VBox>
+                        </l:Grid>
+
+                        <!-- Vertical Column Chart: MFU Templates by Modules -->
+                        <Panel headerText="MFU Templates by Modules"
+                               class="chartPanel modulePanel" expandable="false">
+                            <content>
+                                <HBox class="sapUiTinyMargin" justifyContent="End">
+                                    <HBox alignItems="Center" class="sapUiTinyMarginEnd">
+                                        <core:Icon src="sap-icon://circle-task-2" class="legendIconApproved"/>
+                                        <Text text="approved" class="legendText sapUiTinyMarginBegin"/>
+                                    </HBox>
+                                    <HBox alignItems="Center" class="sapUiTinyMarginEnd">
+                                        <core:Icon src="sap-icon://circle-task-2" class="legendIconPending"/>
+                                        <Text text="pending" class="legendText sapUiTinyMarginBegin"/>
+                                    </HBox>
+                                    <HBox alignItems="Center">
+                                        <core:Icon src="sap-icon://circle-task-2" class="legendIconUploaded"/>
+                                        <Text text="uploaded" class="legendText sapUiTinyMarginBegin"/>
+                                    </HBox>
+                                </HBox>
+                                <!-- Dataset bound programmatically in controller -->
+                                <viz:VizFrame id="moduleBarChart"
+                                    uiConfig="{applicationSet:'fiori'}"
+                                    height="220px" width="100%"
+                                    vizType="column"/>
+                            </content>
+                        </Panel>
+
+                    </HBox>
+
+                    <!-- ROW 2: Donut + 3 Column Charts -->
+                    <l:Grid defaultSpan="XL3 L3 M6 S12"
+                            class="sapUiSmallMarginBottom"
+                            containerQuery="true">
+
+                        <Panel headerText="MFU Templates by Count"
+                               class="chartPanel" expandable="false">
+                            <content>
+                                <HBox class="sapUiTinyMargin" wrap="Wrap">
+                                    <HBox alignItems="Center" class="sapUiTinyMarginEnd">
+                                        <core:Icon src="sap-icon://circle-task-2" class="legendESG"/>
+                                        <Text text="ESG" class="legendText sapUiTinyMarginBegin"/>
+                                    </HBox>
+                                    <HBox alignItems="Center" class="sapUiTinyMarginEnd">
+                                        <core:Icon src="sap-icon://circle-task-2" class="legendFINCOST"/>
+                                        <Text text="FINCOST" class="legendText sapUiTinyMarginBegin"/>
+                                    </HBox>
+                                    <HBox alignItems="Center" class="sapUiTinyMarginEnd">
+                                        <core:Icon src="sap-icon://circle-task-2" class="legendICON"/>
+                                        <Text text="ICON" class="legendText sapUiTinyMarginBegin"/>
+                                    </HBox>
+                                    <HBox alignItems="Center" class="sapUiTinyMarginEnd">
+                                        <core:Icon src="sap-icon://circle-task-2" class="legendNFRP"/>
+                                        <Text text="NFRP" class="legendText sapUiTinyMarginBegin"/>
+                                    </HBox>
+                                    <HBox alignItems="Center">
+                                        <core:Icon src="sap-icon://circle-task-2" class="legendTREASURY"/>
+                                        <Text text="TREASURY" class="legendText sapUiTinyMarginBegin"/>
+                                    </HBox>
+                                </HBox>
+                                <viz:VizFrame id="pieChart"
+                                    uiConfig="{applicationSet:'fiori'}"
+                                    height="200px" width="100%"
+                                    vizType="donut"/>
+                            </content>
+                        </Panel>
+
+                        <Panel headerText="Top 3 MFU Templates by Usage (by Month)"
+                               class="chartPanel" expandable="false">
+                            <content>
+                                <viz:VizFrame id="monthChart"
+                                    uiConfig="{applicationSet:'fiori'}"
+                                    height="200px" width="100%"
+                                    vizType="column"/>
+                            </content>
+                        </Panel>
+
+                        <Panel headerText="Top 3 MFU Templates by Usage (by Quarter)"
+                               class="chartPanel" expandable="false">
+                            <content>
+                                <viz:VizFrame id="quarterChart"
+                                    uiConfig="{applicationSet:'fiori'}"
+                                    height="200px" width="100%"
+                                    vizType="column"/>
+                            </content>
+                        </Panel>
+
+                        <Panel headerText="Top 3 MFU Templates by Usage (by Year)"
+                               class="chartPanel" expandable="false">
+                            <content>
+                                <viz:VizFrame id="yearChart"
+                                    uiConfig="{applicationSet:'fiori'}"
+                                    height="200px" width="100%"
+                                    vizType="column"/>
+                            </content>
+                        </Panel>
+
+                    </l:Grid>
+
+                    <!-- MFU Details Table -->
+                    <Panel headerText="MFU Details" class="chartPanel" expandable="false">
+                        <content>
+                            <Table id="mfuTable"
+                                   items="{dashboard>/tableData}"
+                                   class="mfuTable"
+                                   noDataText="No data available"
+                                   sticky="ColumnHeaders">
+                                <columns>
+                                    <Column><Text text="MODULE NAME"/></Column>
+                                    <Column><Text text="SUB MODULE NAME"/></Column>
+                                    <Column><Text text="LOAD TYPE"/></Column>
+                                    <Column><Text text="LOAD TEMPLATE"/></Column>
+                                    <Column hAlign="End"><Text text="LOAD COUNT"/></Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem>
+                                        <cells>
+                                            <Text text="{dashboard>moduleName}"/>
+                                            <Text text="{dashboard>subModuleName}"/>
+                                            <Text text="{dashboard>loadType}"/>
+                                            <Text text="{dashboard>loadTemplate}"/>
+                                            <Text text="{dashboard>loadCount}" class="loadCount"/>
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </content>
+                    </Panel>
+
+                </VBox>
+            </VBox>
+        </content>
+    </Page>
+</mvc:View>
