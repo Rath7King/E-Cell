@@ -1,0 +1,4 @@
+fetch("https://port4004-workspaces-ws-YOUR-ID.eu10.applicationstudio.cloud.sap/odata/v4/mfu/KPISummary")
+  .then(r => r.json())
+  .then(d => console.log("SUCCESS:", JSON.stringify(d)))
+  .catch(e => console.error("FAILED:", e.message));
