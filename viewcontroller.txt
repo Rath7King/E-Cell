@@ -1,0 +1,308 @@
+sap.ui.define([
+    "sap/ui/core/mvc/Controller",
+    "sap/ui/model/json/JSONModel",
+    "sap/viz/ui5/controls/VizFrame",
+    "sap/viz/ui5/controls/common/feeds/FeedItem",
+    "sap/viz/ui5/data/FlattenedDataset",
+    "sap/m/MessageToast",
+    "sap/m/BusyDialog"
+], function (Controller, JSONModel, VizFrame, FeedItem, FlattenedDataset, MessageToast, BusyDialog) {
+    "use strict";
+
+    // ── Base URL of your CAP OData service ──────────────────────
+    // Change this if your CAP server runs on a different port or host
+    var BASE_URL = "http://localhost:4004/odata/v4/mfu";
+
+    return Controller.extend("project1.controller.View1", {
+
+        // ── Lifecycle ────────────────────────────────────────────
+        onInit: function () {
+            this._initDashboardModel();
+            this._loadAllData();
+            // Auto-refresh every 30 seconds
+            this._timer = setInterval(this._loadAllData.bind(this), 30000);
+        },
+
+        onExit: function () {
+            if (this._timer) { clearInterval(this._timer); }
+        },
+
+        onAfterRendering: function () {
+            this._setupAllCharts();
+        },
+
+        // ── Init empty dashboard model ───────────────────────────
+        _initDashboardModel: function () {
+            var oModel = new JSONModel({
+                createdDate:    "Loading...",
+                kpi: {
+                    uploaded:  "...",
+                    approved:  "...",
+                    onboarded: "...",
+                    rejected:  "-"
+                },
+                moduleData:     [],
+                pieData:        [],
+                topMonthData:   [],
+                topQuarterData: [],
+                topYearData:    [],
+                tableData:      []
+            });
+            this.getView().setModel(oModel, "dashboard");
+        },
+
+        // ── Master load function — calls all endpoints ───────────
+        _loadAllData: function () {
+            var that = this;
+
+            Promise.all([
+                that._fetchJSON(BASE_URL + "/KPISummary"),
+                that._fetchJSON(BASE_URL + "/OnboardedCount"),
+                that._fetchJSON(BASE_URL + "/ModuleStats"),
+                that._fetchJSON(BASE_URL + "/UsageStats?$orderby=usageCount desc"),
+                that._fetchJSON(BASE_URL + "/LoadDetails?$orderby=loadDate desc&$top=50")
+            ]).then(function (results) {
+                that._applyKPI(results[0], results[1]);
+                that._applyModuleStats(results[2]);
+                that._applyUsageStats(results[3]);
+                that._applyTableData(results[4]);
+                that._updateTimestamp();
+                that._setupAllCharts();
+            }).catch(function (err) {
+                console.error("Dashboard load failed:", err);
+                MessageToast.show("Could not load data. Check CAP server is running.");
+            });
+        },
+
+        // ── Generic JSON fetch helper ────────────────────────────
+        _fetchJSON: function (sUrl) {
+            return fetch(sUrl, {
+                headers: { "Accept": "application/json" }
+            }).then(function (res) {
+                if (!res.ok) {
+                    throw new Error("HTTP " + res.status + " for " + sUrl);
+                }
+                return res.json();
+            });
+        },
+
+        // ── Apply KPI data ───────────────────────────────────────
+        _applyKPI: function (oKPIData, oOnboardedData) {
+            var dm = this.getView().getModel("dashboard");
+            var aRows = oKPIData.value || [];
+            if (aRows.length > 0) {
+                var o = aRows[0];
+                dm.setProperty("/kpi/uploaded",
+                    String(o.totalUploaded || 0));
+                dm.setProperty("/kpi/approved",
+                    String(o.totalApproved || 0));
+                dm.setProperty("/kpi/rejected",
+                    (o.totalRejected > 0) ? String(o.totalRejected) : "-");
+            }
+            var aOnboard = (oOnboardedData.value || []);
+            if (aOnboard.length > 0) {
+                dm.setProperty("/kpi/onboarded",
+                    String(aOnboard[0].totalOnboarded || 0));
+            }
+        },
+
+        // ── Apply module stats ───────────────────────────────────
+        _applyModuleStats: function (oData) {
+            var aRows = oData.value || [];
+            var aModule = aRows.map(function (o) {
+                return {
+                    module:   o.moduleName  || "",
+                    approved: o.approved    || 0,
+                    pending:  o.pending     || 0,
+                    uploaded: o.uploaded    || 0
+                };
+            });
+            var aPie = aModule.map(function (m) {
+                return {
+                    module: m.module,
+                    count:  m.approved + m.pending + m.uploaded
+                };
+            });
+            var dm = this.getView().getModel("dashboard");
+            dm.setProperty("/moduleData", aModule);
+            dm.setProperty("/pieData",    aPie);
+        },
+
+        // ── Apply usage stats ────────────────────────────────────
+        _applyUsageStats: function (oData) {
+            var aAll = oData.value || [];
+            var fnTop3 = function (sPeriod) {
+                return aAll
+                    .filter(function (r) { return r.period === sPeriod; })
+                    .sort(function (a, b) { return b.usageCount - a.usageCount; })
+                    .slice(0, 3)
+                    .map(function (r) {
+                        return {
+                            template: r.moduleName  || r.templateName,
+                            usage:    r.usageCount  || 0
+                        };
+                    });
+            };
+            var dm = this.getView().getModel("dashboard");
+            dm.setProperty("/topMonthData",   fnTop3("MONTH"));
+            dm.setProperty("/topQuarterData", fnTop3("QUARTER"));
+            dm.setProperty("/topYearData",    fnTop3("YEAR"));
+        },
+
+        // ── Apply table data ─────────────────────────────────────
+        _applyTableData: function (oData) {
+            var aRows = (oData.value || []).map(function (o) {
+                return {
+                    moduleName:    o.moduleName    || "",
+                    subModuleName: o.subModuleName || "",
+                    loadType:      o.loadType      || "",
+                    loadTemplate:  o.loadTemplate  || "",
+                    loadCount:     o.loadCount
+                        ? Number(o.loadCount).toLocaleString()
+                        : ""
+                };
+            });
+            this.getView().getModel("dashboard").setProperty("/tableData", aRows);
+        },
+
+        // ── Update timestamp ─────────────────────────────────────
+        _updateTimestamp: function () {
+            var now = new Date();
+            var sDate = now.toLocaleDateString("en-US", {
+                month: "short", day: "2-digit", year: "numeric"
+            });
+            var sTime = now.getHours() + ":" +
+                String(now.getMinutes()).padStart(2, "0");
+            this.getView().getModel("dashboard")
+                .setProperty("/createdDate",
+                    "CREATEDDAY: " + sDate + " " + sTime + "...");
+        },
+
+        // ── Manual refresh ───────────────────────────────────────
+        onRefresh: function () {
+            MessageToast.show("Refreshing from HANA...");
+            this._loadAllData();
+        },
+
+        // ── Setup ALL charts ─────────────────────────────────────
+        _setupAllCharts: function () {
+            this._setupModuleChart();
+            this._setupPieChart();
+            this._setupColumnChart(
+                "monthChart",   "/topMonthData",   ["#2196a8", "#4db8a4", "#7ec8c8"]);
+            this._setupColumnChart(
+                "quarterChart", "/topQuarterData", ["#1f3d7a", "#4db8a4", "#7ec8c8"]);
+            this._setupColumnChart(
+                "yearChart",    "/topYearData",    ["#4db8a4", "#2196a8", "#1f3d7a"]);
+        },
+
+        // ── Module grouped column chart ──────────────────────────
+        _setupModuleChart: function () {
+            var oChart = this.byId("moduleBarChart");
+            if (!oChart) { return; }
+            oChart.destroyFeeds();
+            oChart.setVizType("column");
+            oChart.setVizProperties({
+                legend:       { visible: false },
+                categoryAxis: { title: { visible: false } },
+                valueAxis:    { title: { visible: false } },
+                title:        { visible: false },
+                plotArea: {
+                    colorPalette: ["#1f3d7a", "#4db8a4", "#7ec8a0"],
+                    dataLabel: {
+                        visible: true,
+                        formatString: "#",
+                        hideWhenOverlap: true
+                    }
+                }
+            });
+            var oDS = new FlattenedDataset({
+                dimensions: [
+                    { name: "Module", value: "{dashboard>module}" }
+                ],
+                measures: [
+                    { name: "Approved", value: "{dashboard>approved}" },
+                    { name: "Pending",  value: "{dashboard>pending}"  },
+                    { name: "Uploaded", value: "{dashboard>uploaded}" }
+                ],
+                data: { path: "dashboard>/moduleData" }
+            });
+            oChart.setDataset(oDS);
+            oChart.addFeed(new FeedItem({
+                uid: "valueAxis", type: "Measure",
+                values: ["Approved", "Pending", "Uploaded"]
+            }));
+            oChart.addFeed(new FeedItem({
+                uid: "categoryAxis", type: "Dimension",
+                values: ["Module"]
+            }));
+        },
+
+        // ── Donut chart ──────────────────────────────────────────
+        _setupPieChart: function () {
+            var oChart = this.byId("pieChart");
+            if (!oChart) { return; }
+            oChart.destroyFeeds();
+            oChart.setVizProperties({
+                legend: { visible: false },
+                title:  { visible: false },
+                plotArea: {
+                    colorPalette: [
+                        "#2196a8", "#4db8a4", "#7ec8c8", "#1a5276", "#34495e"
+                    ],
+                    dataLabel: { visible: true, type: "percentage" }
+                }
+            });
+            var oDS = new FlattenedDataset({
+                dimensions: [
+                    { name: "Module", value: "{dashboard>module}" }
+                ],
+                measures: [
+                    { name: "Count", value: "{dashboard>count}" }
+                ],
+                data: { path: "dashboard>/pieData" }
+            });
+            oChart.setDataset(oDS);
+            oChart.addFeed(new FeedItem({
+                uid: "size", type: "Measure", values: ["Count"]
+            }));
+            oChart.addFeed(new FeedItem({
+                uid: "color", type: "Dimension", values: ["Module"]
+            }));
+        },
+
+        // ── Top 3 vertical column charts ─────────────────────────
+        _setupColumnChart: function (sId, sDataPath, aColors) {
+            var oChart = this.byId(sId);
+            if (!oChart) { return; }
+            oChart.destroyFeeds();
+            oChart.setVizType("column");
+            oChart.setVizProperties({
+                legend:       { visible: false },
+                categoryAxis: { title: { visible: false } },
+                valueAxis:    { title: { visible: false } },
+                title:        { visible: false },
+                plotArea: {
+                    colorPalette: aColors,
+                    dataLabel: { visible: true }
+                }
+            });
+            var oDS = new FlattenedDataset({
+                dimensions: [
+                    { name: "Template", value: "{dashboard>template}" }
+                ],
+                measures: [
+                    { name: "Usage", value: "{dashboard>usage}" }
+                ],
+                data: { path: "dashboard>" + sDataPath }
+            });
+            oChart.setDataset(oDS);
+            oChart.addFeed(new FeedItem({
+                uid: "valueAxis", type: "Measure", values: ["Usage"]
+            }));
+            oChart.addFeed(new FeedItem({
+                uid: "categoryAxis", type: "Dimension", values: ["Template"]
+            }));
+        }
+    });
+});
